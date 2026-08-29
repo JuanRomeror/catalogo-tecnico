@@ -1,0 +1,151 @@
+// =========================================================================
+// MENÚ PERSONALIZADO EN GOOGLE SHEETS
+// =========================================================================
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🤖 Automatización GitHub')
+      .addItem('Sincronizar Enlaces (Fotos y 3D)', 'sincronizarEnlacesGitHub')
+      .addToUi();
+}
+
+// =========================================================================
+// FUNCIONES DE LA APLICACIÓN WEB
+// =========================================================================
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('Visor de Componentes - Beta')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function obtenerDatosDeExcel() {
+  const libro = SpreadsheetApp.openById("1ziisVVwzI9SpPCBBjO0yS5z0On4sqLiNr1V74SGVhWk");
+  
+  // ¡OJO! Escribe aquí los nombres EXACTOS de tus pestañas
+const hojasALeer = ["RELACIONCOD", "SIGN", "TOPPER"]; 
+  //PRUEBAS CONCEPT
+ // const hojasALeer = ["CONCEPTPRIME"]; 
+  const baseDeDatosLimpia = [];
+
+  hojasALeer.forEach(nombreHoja => {
+    const hoja = libro.getSheetByName(nombreHoja);
+    
+    // Solo intenta leer si la hoja existe y tiene datos (evita choques)
+    if (hoja && hoja.getLastRow() > 1) {
+      const datos = hoja.getDataRange().getDisplayValues();
+      const filas = datos.slice(1);
+
+      filas.forEach(function(fila) {
+        try {
+          const codNav = (fila[0] || "").toString().trim();
+          const codON = (fila[1] || "").toString().trim();
+
+          // Acepta la fila si tiene NAVISION o si tiene ON
+          if (codNav !== "" || codON !== "") {
+            baseDeDatosLimpia.push({
+              codigoNav: codNav,        
+              codigoON: codON,          
+              descripcion: (fila[2] || "").toString().trim() || "-",      
+              categoria: (fila[3] || "").toString().trim(),        
+              marcaText: (fila[4] || "").toString().trim(),        
+              modeloText: (fila[5] || "").toString().trim(),        
+              tipo: (fila[6] || "").toString().trim(),              
+              refaccionDe: (fila[7] || "").toString().trim(),      
+              solicitanteText: (fila[8] || "").toString().trim(),  
+              reparableText: (fila[9] || "").toString().trim(),    
+              subCategoria: (fila[10] || "").toString().trim(),    
+              img: (fila[11] && fila[11].toString().trim() !== "") ? fila[11].toString().trim() : "https://placehold.co/600x400/eeeeee/333333?text=Sin+Imagen",
+              modelo3D: (fila[12] || "").toString().trim(),
+              infoUrl: (fila[13] || "").toString().trim()
+            });
+          }
+        } catch (e) {
+          // Ignora silenciosamente filas corruptas
+        }
+      });
+    }
+  });
+  
+  return baseDeDatosLimpia;
+}
+
+// =========================================================================
+// BOT DE SINCRONIZACIÓN AUTOMÁTICA CON GITHUB
+// =========================================================================
+function sincronizarEnlacesGitHub() {
+  const repoUsuario = "JuanRomeror";
+  const repoNombre = "Activos-BC";
+  const rama = "main";
+  const libro = SpreadsheetApp.openById("1ziisVVwzI9SpPCBBjO0yS5z0On4sqLiNr1V74SGVhWk");
+  
+  // ¡OJO! Pon también aquí tus pestañas para que el Bot sepa dónde trabajar
+// Uso general de la base:
+//  const hojasALeer = ["RELACIONCOD", "SIGN", "TOPPER"]; 
+// Para revisión de componentes CONCEPT usar:
+  const hojasALeer = ["CONCEPTPRIME"]; 
+  const apiUrl = "https://api.github.com/repos/" + repoUsuario + "/" + repoNombre + "/git/trees/" + rama + "?recursive=1";
+ 
+  try {
+    const response = UrlFetchApp.fetch(apiUrl);
+    const data = JSON.parse(response.getContentText());
+    if (!data.tree) throw new Error("No se pudo leer el repositorio.");
+   
+    const diccionarioArchivos = {};
+   
+    data.tree.forEach(item => {
+      if (item.type === 'blob') { 
+        const nombreCompleto = item.path.split('/').pop(); 
+        const extension = nombreCompleto.split('.').pop().toLowerCase(); 
+        const nombreSinExtension = nombreCompleto.substring(0, nombreCompleto.lastIndexOf('.')); 
+        const rawUrl = "https://raw.githubusercontent.com/" + repoUsuario + "/" + repoNombre + "/" + rama + "/" + item.path;
+       
+        if (!diccionarioArchivos[nombreSinExtension]) {
+          diccionarioArchivos[nombreSinExtension] = {};
+        }
+       
+        if (extension === 'png' || extension === 'jpg' || extension === 'jpeg') {
+          diccionarioArchivos[nombreSinExtension].img = rawUrl;
+        } else if (extension === 'glb') {
+          diccionarioArchivos[nombreSinExtension].modelo3d = rawUrl;
+        }
+      }
+    });
+   
+    let totalFilasActualizadas = 0;
+
+    hojasALeer.forEach(nombreHoja => {
+      const sheet = libro.getSheetByName(nombreHoja);
+      if (!sheet) return;
+
+      const rango = sheet.getDataRange();
+      const valores = rango.getValues();
+      const nuevasColumnas = [];
+     
+      for (let i = 1; i < valores.length; i++) { 
+        let navision = valores[i][0] ? valores[i][0].toString().trim() : "";
+        let codigoOn = valores[i][1] ? valores[i][1].toString().trim() : "";
+        let urlFoto = valores[i][11] ? valores[i][11].toString().trim() : "";
+        let url3D = valores[i][12] ? valores[i][12].toString().trim() : "";  
+        
+        let datosGitHub = diccionarioArchivos[navision] || diccionarioArchivos[codigoOn];
+       
+        if (datosGitHub) {
+          if (datosGitHub.img) urlFoto = datosGitHub.img;
+          if (datosGitHub.modelo3d) url3D = datosGitHub.modelo3d;
+        }
+       
+        nuevasColumnas.push([urlFoto, url3D]);
+      }
+     
+      if (nuevasColumnas.length > 0) {
+        sheet.getRange(2, 12, nuevasColumnas.length, 2).setValues(nuevasColumnas);
+        totalFilasActualizadas += nuevasColumnas.length;
+      }
+    });
+   
+    SpreadsheetApp.getUi().alert("¡ÉXITO! Sincronización completada. Se procesaron " + totalFilasActualizadas + " filas en total.");
+   
+  } catch (e) {
+    SpreadsheetApp.getUi().alert("Error al sincronizar: " + e.message);
+  }
+}
