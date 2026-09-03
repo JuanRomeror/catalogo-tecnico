@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Componentes - Operaciones del Norte</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    
+    <style>
+        :root { --primary-blue: #0f355c; --light-gray: #f2f2f2; --border-color: #333333; --text-dark: #333333; --text-light: #ffffff; }
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 20px; background-color: #ffffff; color: var(--text-dark); display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 900px; background-color: #ffffff; padding: 40px; }
+
+        /* HEADER LOGO */
+        .header-logo { display: flex; justify-content: flex-end; margin-bottom: 30px; }
+        .header-logo-img { max-height: 70px; width: auto; object-fit: contain; }
+
+        /* CONTROLES */
+        .control-row { display: flex; margin-bottom: 20px; border: 1px solid var(--border-color); height: 35px; }
+        .control-label { background-color: var(--primary-blue); color: var(--text-light); font-weight: 500; padding: 0 20px; display: flex; align-items: center; justify-content: center; width: 250px; letter-spacing: 0.5px; text-align: center; }
+        .control-input { flex-grow: 1; display: flex; background-color: var(--light-gray); }
+        .control-input input { width: 100%; border: none; background-color: transparent; padding: 0 15px; font-family: 'Roboto', sans-serif; font-size: 14px; outline: none; }
+        .select-wrapper { flex-grow: 1; display: flex; position: relative; background-color: var(--light-gray); }
+        .select-wrapper select { appearance: none; -webkit-appearance: none; cursor: pointer; width: 100%; border: none; background-color: transparent; padding: 0 15px; font-family: 'Roboto', sans-serif; font-size: 14px; outline: none; }
+        .select-arrow { position: absolute; right: 0; top: 0; height: 100%; width: 40px; border-left: 1px solid var(--border-color); display: flex; justify-content: center; align-items: center; pointer-events: none; background-color: #fff; }
+        .search-btn { background-color: #fff; border: none; border-left: 1px solid var(--border-color); width: 40px; cursor: pointer; display: flex; justify-content: center; align-items: center; color: var(--text-dark); }
+        .search-btn:hover { background-color: #e0e0e0; }
+
+        /* CARRUSEL SEPARADO (MÁQUINAS Y SIGNS) */
+        .carousel-container { width: 100%; overflow: hidden; margin-bottom: 25px; display: none; }
+        .carousel-title { font-size: 14px; font-weight: 700; color: var(--primary-blue); margin-bottom: 12px; text-transform: uppercase; border-bottom: 2px solid var(--primary-blue); padding-bottom: 5px; }
+        .carousel-track { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 15px; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; align-items: stretch; }
+        .carousel-track::-webkit-scrollbar { height: 8px; }
+        .carousel-track::-webkit-scrollbar-thumb { background-color: var(--primary-blue); border-radius: 4px; }
+        
+        .carousel-card { flex: 0 0 auto; width: 140px; background: #fff; border: 2px solid var(--light-gray); border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+        .carousel-card:hover { border-color: #a0c4ff; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .carousel-card.active { border-color: var(--primary-blue); background-color: #e6f2ff; box-shadow: 0 5px 15px rgba(15,53,92,0.25); transform: scale(1.02); }
+        .carousel-img-container { width: 100%; height: 170px; background-color: #fff; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box; }
+        .carousel-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .carousel-label { width: 100%; padding: 10px 5px; background-color: var(--light-gray); color: var(--primary-blue); font-weight: 700; font-size: 12px; text-align: center; text-transform: uppercase; transition: background 0.2s; }
+        .carousel-card.active .carousel-label { background-color: var(--primary-blue); color: #fff; }
+
+        .carousel-card.large { width: 320px; border-radius: 12px; }
+        .carousel-card.large .carousel-img-container { height: 320px; padding: 20px; }
+        .carousel-card.large .carousel-label { font-size: 16px; padding: 15px 5px; }
+
+        /* TABLA PRINCIPAL DE RESULTADOS */
+        .results-table-container { margin-top: 10px; border: 1px solid var(--border-color); display: none; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; min-width: 800px; }
+        th { background-color: var(--primary-blue); color: var(--text-light); text-align: left; padding: 10px 15px; font-weight: 500; border-bottom: 2px solid var(--border-color); border-right: 1px solid rgba(255,255,255,0.2); white-space: nowrap; vertical-align: top; cursor: pointer; user-select: none; }
+        th:hover { background-color: #16497d; }
+        td { padding: 10px 15px; border-bottom: 1px solid var(--border-color); border-right: 1px solid #ddd; font-size: 14px; }
+        #vistaListado td:nth-child(1), #vistaListado td:nth-child(2) { white-space: nowrap; width: 1%; }
+        #vistaListado td:nth-child(3) { width: 30%; }
+        tr:nth-child(even) { background-color: var(--light-gray); }
+        tr:hover { background-color: #e6f2ff; cursor: pointer; }
+        .sort-icon { margin-left: 5px; font-size: 12px; color: rgba(255,255,255,0.5); }
+        .sort-icon.active { color: #fff; }
+        .header-filter { display: block; width: 100%; margin-top: 8px; padding: 4px; font-size: 11px; font-family: 'Roboto', sans-serif; background-color: #fff; color: var(--text-dark); border: 1px solid #ccc; border-radius: 4px; cursor: pointer; outline: none; }
+        .btn-cargar-mas { width: 100%; padding: 12px; background-color: var(--light-gray); color: var(--primary-blue); text-align: center; font-weight: 700; cursor: pointer; border: none; border-bottom: 1px solid var(--border-color); }
+        .btn-cargar-mas:hover { background-color: #e0e0e0; }
+
+        /* FICHA TÉCNICA */
+        .detail-card { border: 1px solid var(--primary-blue); margin-top: 30px; display: none; background-color: #fff; }
+        .strict-table { display: flex; flex-direction: column; width: 100%; border-bottom: 2px solid var(--primary-blue); }
+        .st-row { display: flex; width: 100%; border-bottom: 1px solid var(--primary-blue); min-height: 35px; }
+        .st-row:last-child { border-bottom: none; }
+        .st-label { background-color: var(--primary-blue); color: var(--text-light); font-weight: 700; font-size: 14px; padding: 8px 15px; display: flex; align-items: center; justify-content: center; text-align: center; flex: 0 0 25%; box-sizing: border-box; border-right: 1px solid #fff; }
+        .st-value { background-color: #fff; color: var(--text-dark); font-size: 14px; font-weight: 500; padding: 8px 15px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; flex: 0 0 25%; box-sizing: border-box; border-right: 1px solid var(--primary-blue); }
+        .st-label:last-child, .st-value:last-child { border-right: none; }
+        .st-value.full-val { flex: 0 0 75%; }
+        .st-value.right-align { justify-content: flex-end; }
+        .action-link { font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; color: var(--text-dark); font-size: 13px; }
+        .action-link:hover { text-decoration: underline; color: var(--primary-blue); }
+
+        /* ZONA DE MEDIOS */
+        .media-container { padding: 20px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; min-height: 400px; position: relative; }
+        .media-container img { max-width: 100%; max-height: 400px; object-fit: contain; }
+        model-viewer { width: 100%; height: 400px; background-color: #ffffff; --poster-color: transparent; }
+        .action-btn-group { position: absolute; bottom: 15px; right: 15px; display: flex; gap: 10px; }
+        .btn-accion { background-color: #fff; border: 1px solid var(--border-color); padding: 8px 15px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 4px; transition: background 0.2s; }
+        .btn-accion:hover { background-color: #e0e0e0; }
+
+        /* PANTALLA DE CARGA (SPINNER) */
+        .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255,255,255,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99999; }
+        .spinner { width: 50px; height: 50px; border: 5px solid var(--light-gray); border-top: 5px solid var(--primary-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* CHIPS ESTÉTICOS Y PALETAS */
+        .chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; margin: 0; white-space: nowrap; }
+        .chip-bryke { background-color: #fce8e6; color: #d93025; }
+        .chip-one { background-color: #fef7e0; color: #e37400; }
+        .chip-glare { background-color: #e6f4ea; color: #1e8e3e; }
+        .chip-concept { background-color: #e8f0fe; color: #1967d2; }
+        .chip-fantasy { background-color: #f3e8fd; color: #9334e6; }
+        .chip-produccion { background-color: #e8f0fe; color: #1967d2; }
+        .chip-tecnico { background-color: #e6f4ea; color: #1e8e3e; }
+        .chip-refaccion { background-color: #acc6de; color: #363f32; }
+        .chip-consumible { background-color: #c6b09a; color: #383a3c; }
+        .chip-herramienta { background-color: #e8eaed; color: #160101; }
+        .chip-si { color: #1e8e3e; font-weight: 700; }
+        .chip-no { color: #d93025; font-weight: 700; }
+        
+        .chip-purple { background-color: #f3e8fd; color: #9334e6; }
+        .chip-blue { background-color: #e8f0fe; color: #1967d2; }
+        .chip-green { background-color: #e6f4ea; color: #1e8e3e; }
+        .chip-yellow { background-color: #fef7e0; color: #ea8600; }
+        .chip-lightorange { background-color: #feefe3; color: #e65100; }
+        .chip-red { background-color: #fce8e6; color: #d93025; }
+        .chip-teal { background-color: #00bfa5; color: #ffffff; }
+        .chip-darkorange { background-color: #e67c73; color: #ffffff; }
+        .chip-gray { background-color: #f1f3f4; color: #3c4043; }
+
+        @media (max-width: 768px) {
+            .app-container { padding: 10px; }
+            .st-label, .st-value { font-size: 11px; padding: 6px 4px; }
+            .control-label { width: 100px; font-size: 11px; padding: 0 10px; }
+            .action-btn-group { flex-direction: column; bottom: 10px; right: 10px; }
+            .carousel-card.large { width: 75vw; min-width: 260px; height: 62vh; }
+            .carousel-card.large .carousel-img-container { height: calc(100% - 50px); padding: 15px; }
+        }
+
+        /* MODAL UNIFICADO */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
+        .modal-content { background: #fff; width: 100%; max-width: 900px; max-height: 80vh; display: flex; flex-direction: column; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; background-color: var(--primary-blue); color: var(--text-light); border-bottom: 1px solid var(--border-color); }
+        .modal-title { padding: 12px 15px; font-size: 15px; font-weight: 700; }
+        .modal-close { background: #f2f2f2; border: none; border-left: 1px solid var(--border-color); width: 45px; height: 100%; font-size: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .modal-body { overflow-y: auto; overflow-x: auto; background: #fff; }
+        .modal-body table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .modal-body th { background-color: var(--primary-blue); color: var(--text-light); text-align: left; padding: 10px 15px; font-weight: 500; border-bottom: 2px solid var(--border-color); border-right: 1px solid rgba(255,255,255,0.2); font-size: 13px; }
+        .modal-body td { padding: 10px 15px; border-bottom: 1px solid var(--border-color); border-right: 1px solid #ddd; font-size: 13px; word-wrap: break-word; vertical-align: middle; }
+        .modal-img { max-width: 100%; max-height: 70px; object-fit: contain; }
+    </style>
+</head>
+<body>
+    
+    <div id="loaderOverlay" class="loader-overlay">
+        <div class="spinner"></div>
+        <div id="loaderText" style="margin-top: 15px; font-weight: 500; color: var(--primary-blue);">Sincronizando catálogo...</div>
+    </div>
+
+    <div class="app-container">
+        <div class="header-logo">
+            <img src="https://github.com/JuanRomeror/Activos-BC/blob/main/LOGOODNsinfondo.png?raw=true" alt="Logo Operaciones del Norte" class="header-logo-img" id="logoEmpresa">
+        </div>
+
+        <div class="control-row">
+            <div class="control-label">Categoría</div>
+            <div class="select-wrapper">
+                <select id="categoriaSelect" onchange="mostrarListado()" disabled>
+                    <option value="">Conectando con base de datos...</option>
+                </select>
+                <div class="select-arrow"><i class="fa-solid fa-angle-down"></i></div>
+            </div>
+        </div>
+
+        <div class="control-row">
+            <div class="control-label">Búsqueda</div>
+            <div class="control-input">
+                <input type="text" id="searchInput" placeholder="Buscar por código, nombre o modelo..." onkeyup="ejecutarBusqueda()">
+            </div>
+            <button class="search-btn" title="Buscar" onclick="ejecutarBusqueda()"><i class="fa-solid fa-folder-open"></i></button>
+        </div>
+
+        <!-- CARRUSEL SEPARADO -->
+        <div id="menuPrincipalContainer">
+            <div class="carousel-container" id="menuMaquinasContainer" style="display: block;">
+                <div class="carousel-title"><i class="fa-solid fa-desktop"></i> SELECCIONA UNA MÁQUINA PARA FILTRAR:</div>
+                <div class="carousel-track" id="touchMenuMarcasMaquinas"></div>
+            </div>
+            <div class="carousel-container" id="menuSignsContainer" style="display: block;">
+                <div class="carousel-title"><i class="fa-solid fa-solar-panel"></i> SELECCIONA UN SIGN PARA FILTRAR:</div>
+                <div class="carousel-track" id="touchMenuMarcasSigns"></div>
+            </div>
+        </div>
+
+        <!-- LISTADO -->
+        <div id="vistaListado" class="results-table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="ordenarTabla(0)">Código NAVISION <i id="sortIcon0" class="sort-icon fa-solid fa-sort"></i></th>
+                        <th onclick="ordenarTabla(1)">Código ON <i id="sortIcon1" class="sort-icon fa-solid fa-sort"></i></th>
+                        <th onclick="ordenarTabla(2)">Descripción <i id="sortIcon2" class="sort-icon fa-solid fa-sort"></i></th>
+                        <th>Marca 
+                            <select id="filtroMarca" class="header-filter" onchange="aplicarFiltrosCabecera()" style="display:none;"><option value="">Todas</option></select>
+                        </th>
+                        <th>Modelo / Sign
+                            <select id="filtroModelo" class="header-filter" onchange="aplicarFiltrosCabecera()"><option value="">Todos los modelos</option></select>
+                        </th>
+                        <th>Tipo
+                            <select id="filtroTipo" class="header-filter" onchange="aplicarFiltrosCabecera()"><option value="">Todos los tipos</option></select>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="tablaResultadosCuerpo"></tbody>
+            </table>
+            <button id="btnCargarMas" class="btn-cargar-mas" onclick="cargarMasPagina()" style="display: none;">Cargar más resultados <i class="fa-solid fa-chevron-down"></i></button>
+        </div>
+
+        <!-- FICHA TÉCNICA -->
+        <div id="vistaDetalle" class="detail-card">
+            <div class="strict-table">
+                <div class="st-row">
+                    <div class="st-label">Descripción</div>
+                    <div class="st-value full-val" id="detDescripcion">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Código NAVISION</div>
+                    <div class="st-value" id="detCodigoNav">-</div>
+                    <div class="st-label">Código ON</div>
+                    <div class="st-value" id="detCodigoON">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Equipo</div>
+                    <div class="st-value" id="detEquipo">-</div>
+                    <div class="st-label">Categoría</div>
+                    <div class="st-value" id="detCat">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Sub Categoría</div>
+                    <div class="st-value full-val" id="detSubcat">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Marca</div>
+                    <div class="st-value" id="detMarca">-</div>
+                    <div class="st-label">Mod. / Sign</div>
+                    <div class="st-value" id="detModeloSign">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Tipo</div>
+                    <div class="st-value" id="detTipo">-</div>
+                    <div class="st-label">Reparable</div>
+                    <div class="st-value" id="detReparable">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Quién puede solicitar</div>
+                    <div class="st-value full-val" id="detSolicitante">-</div>
+                </div>
+                <div class="st-row">
+                    <div class="st-label">Relación</div>
+                    <div class="st-value full-val right-align">
+                        <span class="action-link" id="linkRefacciones">Ver refacciones de este componente <i class="fa-solid fa-magnifying-glass-plus"></i></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="media-container">
+                <img id="detImagen" src="" alt="Imagen del componente" onerror="this.onerror=null; this.src='https://placehold.co/600x400/eeeeee/333333?text=Sin+Imagen';">
+                <model-viewer id="detModelo3D" src="" alt="Modelo 3D" auto-rotate camera-controls style="display: none;"></model-viewer>
+                <a id="linkDocOculto" href="#" target="_blank" style="display: none;"></a>
+                
+                <div class="action-btn-group">
+                    <button class="btn-accion" id="btnInfoOculto" style="display: none;" onclick="abrirDocumentoInfo()">Información/Planos <i class="fa-solid fa-sitemap"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL UNIFICADO -->
+    <div id="modalGenerico" class="modal-overlay" onclick="cerrarModalFuera(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div id="modalTitulo" class="modal-title">Listado</div>
+                <button class="modal-close" onclick="cerrarModal()">&#10005;</button>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 20%; text-align: center;">Imagen</th>
+                            <th style="width: 25%;">Código NAVISION</th>
+                            <th style="width: 20%;">Código ON</th>
+                            <th style="width: 35%; border-right: none;">Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalTablaCuerpo"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHTML(str) {
+            if (!str) return "";
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        
+        function escapeJS(str) {
+            if (!str) return "";
+            return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "\\\"").replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+        }
+
+        function obtenerValorSeguro(item, posiblesNombres) {
+            for(var i=0; i<posiblesNombres.length; i++) {
+                var nombre = posiblesNombres[i];
+                if (item[nombre] !== undefined && item[nombre] !== null) {
+                    return String(item[nombre]);
+                }
+            }
+            return "";
+        }
+
+        // ====================================================================
+        // DICCIONARIOS Y CONFIGURACIÓN
+        // ====================================================================
+        var MODO_CARRUSEL_SIGN = 'A'; 
+
+        var imagenesMaquinasCatalog = {
+            "BRYKE": "https://github.com/JuanRomeror/Activos-BC/blob/main/BRYKE.png?raw=true",
+            "ONE": "https://github.com/JuanRomeror/Activos-BC/blob/main/SL1.png?raw=true",
+            "GLARE": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/ALTIUS.png?raw=true",
+            "CONCEPT": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/PRIME.png?raw=true",
+            "FANTASY": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/FANTASY.png?raw=true",
+            "BLACKWAVE PLUS": "https://github.com/JuanRomeror/Activos-BC/blob/main/BLACKWAVEPLUS.png?raw=true",
+            "PRIME": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/PRIME.png?raw=true",
+            "PRIME J": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/PRIME%20J.png?raw=true",
+            "DELUXE": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/DELUXE.png?raw=true",
+            "ALLURE": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/ALLURE.png?raw=true",
+            "ALTIUS": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/ALTIUS.png?raw=true",
+            "FUSION": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/FUSION.png?raw=true",
+            "ILLUSION PLUS": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/ILLUSION%20PLUS.png?raw=true",
+            "ILLUSION": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/ILLUSION.png?raw=true",
+            "SLANTOP SL1": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/SL1.png?raw=true",
+            "ALLURE AL1": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/AL1.png?raw=true",
+            "ILLUSION IL1": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/IL1.png?raw=true",
+            "UP RIGHT UP1/UR1": "https://github.com/JuanRomeror/Activos-BC/blob/main/MAQ/MODELOS/UP1.png?raw=true",
+            //SIGNS
+            "3X3 FANTASY": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/3X3%20FANTASY.jpg?raw=true",
+            "DOUBLE RING": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/DOUBLE%20RING.jpg?raw=true",
+            "CROWN": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/CROWN.jpg?raw=true",
+            "CONCEPT 2X2": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/2x2%20CONCEPT.png?raw=true",
+            "CONCEPT 3X3": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/3X3.png?raw=true",
+            "CIRCULAR TIPO C": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/CIRCULAR%20TIPO%20C.jpg?raw=true",
+            "BLAST": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/BLAT%20.jpg?raw=true",
+            "TESLA": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/TESLA.jpg?raw=true",
+            "PANORAMICO": "https://github.com/JuanRomeror/Activos-BC/blob/main/SIGN/SIGNS/PANORAMICO.jpg?raw=true"
+        };
+
+        var relacionMarcaModelo = {
+            "FANTASY": ["FANTASY"],
+            "CONCEPT": ["PRIME", "PRIME J", "DELUXE"],
+            "GLARE": ["ALTIUS", "FUSION", "ILLUSION", "ILLUSION PLUS", "ALLURE"],
+            "ONE": ["SLANTOP SL1", "ALLURE AL1", "UP RIGHT UP1/UR1", "ILLUSION IL1"],
+            "BLACKWAVE PLUS": ["BLACKWAVE PLUS"],
+            "BRYKE": ["BRYKE"]
+        };
+
+        var relacionMarcaSign = {
+            "FANTASY": ["3X3 FANTASY", "DOUBLE RING", "CROWN"],
+            "CONCEPT": ["CONCEPT 2X2", "CONCEPT 3X3", "CIRCULAR TIPO C"],
+            "GLARE": ["BLAST", "TESLA"],
+            "ONE": ["PANORAMICO"]
+        };
+
+        var todosLosSignsArray = [];
+        for (var m in relacionMarcaSign) {
+            todosLosSignsArray = todosLosSignsArray.concat(relacionMarcaSign[m]);
+        }
+
+        var baseDeDatos = [];
+        var resultadosBase = []; 
+        var carouselNivel = 'MARCA';  
+        var marcaTacticaSeleccionada = ""; 
+        var modeloTactivoSeleccionado = ""; 
+        var tipoMenuActivo = 'AMBOS'; // MÁQUINAS Y SIGNS ACTIVOS
+        var urlInfoActual = "";
+        var paginaActual = 1;
+        var filasPorPagina = 50;
+        var columnaOrden = -1;
+        var ordenAscendente = true;
+
+        var selectCat = document.getElementById('categoriaSelect');
+        var vistaListado = document.getElementById('vistaListado');
+        var vistaDetalle = document.getElementById('vistaDetalle');
+        var tablaCuerpo = document.getElementById('tablaResultadosCuerpo');
+        var menuPrincipalContainer = document.getElementById('menuPrincipalContainer');
+        var loader = document.getElementById('loaderOverlay');
+        var loaderText = document.getElementById('loaderText');
+
+        function textoPlano(texto) {
+            if (texto === undefined || texto === null) return "";
+            return String(texto).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+        }
+
+        function limpiarTexto(texto) {
+            if (texto === undefined || texto === null) return "";
+            return String(texto).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        }
+
+        function normalizarItem(item) {
+            var flatItem = {};
+            for (var key in item) {
+                if (item.hasOwnProperty(key) && item[key] !== undefined && item[key] !== null) {
+                    var cleanKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                    flatItem[cleanKey] = String(item[key]).replace(/\n/g, ',').trim();
+                }
+            }
+
+            var itemLimpio = {};
+            itemLimpio.navision = flatItem['navision'] || flatItem['columna1'] || flatItem['codigonavision'] || "";
+            itemLimpio.codigoON = flatItem['codigoon'] || "";
+            itemLimpio.descripcion = flatItem['descripcion'] || "";
+            itemLimpio.equipo = flatItem['equipo'] || "";
+            itemLimpio.categoria = flatItem['categoria'] || "";
+            itemLimpio.subCategoria = flatItem['subcategoria'] || "";
+            itemLimpio.marca = flatItem['marca'] || "";
+            itemLimpio.modelo = flatItem['modelo'] || "";
+            itemLimpio.sign = flatItem['sign'] || "";
+            itemLimpio.tipoSign = flatItem['tiposign'] || "";
+            itemLimpio.tipoMaquina = flatItem['tipomaquina'] || "";
+            itemLimpio.reparable = flatItem['reparable'] || "";
+            itemLimpio.refaccion = flatItem['refaccion'] || flatItem['refaccionde'] || flatItem['relacion'] || "";
+            itemLimpio.solicitante = flatItem['quienpuedesolicitarlarefaccion'] || flatItem['solicitante'] || "";
+            itemLimpio.foto = flatItem['foto'] || flatItem['imagen'] || flatItem['img'] || "";
+            itemLimpio.modelo3D = flatItem['modelo3d'] || "";
+            itemLimpio.plano = flatItem['enlacedeinformacionplanosengoogledrive'] || flatItem['plano'] || flatItem['infourl'] || "";
+
+            itemLimpio.tipoUnificado = (itemLimpio.tipoMaquina + " " + itemLimpio.tipoSign).trim();
+            if(itemLimpio.tipoUnificado === "") itemLimpio.tipoUnificado = flatItem['tipo'] || flatItem['material'] || "";
+
+            itemLimpio.modeloSignUnificado = (itemLimpio.modelo + " " + itemLimpio.sign).trim();
+
+            return itemLimpio;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var timeoutSeguridad = setTimeout(function() {
+                mostrarError({message: "Tiempo agotado. Revisa la conexión con el servidor."});
+            }, 15000);
+
+            try {
+                if (typeof google !== 'undefined' && google.script) {
+                    google.script.run
+                        .withSuccessHandler(function(datos) {
+                            clearTimeout(timeoutSeguridad); 
+                            iniciarAplicacion(datos);
+                        })
+                        .withFailureHandler(function(err) {
+                            clearTimeout(timeoutSeguridad); 
+                            mostrarError(err);
+                        })
+                        .obtenerDatosDeExcel();
+                } else {
+                    clearTimeout(timeoutSeguridad);
+                    mostrarError({message: "Entorno de Google Script no detectado."});
+                }
+            } catch (err) {
+                clearTimeout(timeoutSeguridad);
+                mostrarError({message: "Error de ejecución: " + err.message});
+            }
+        });
+
+        function iniciarAplicacion(datosDesdeExcel) {
+            try {
+                if (!datosDesdeExcel || datosDesdeExcel.length === 0) throw new Error("El Excel respondió vacío.");
+                
+                baseDeDatos = [];
+                var categoriasArray = [];
+
+                for(var i=0; i<datosDesdeExcel.length; i++){
+                    var itemNormalizado = normalizarItem(datosDesdeExcel[i]);
+                    baseDeDatos.push(itemNormalizado);
+                    
+                    var catVal = itemNormalizado.categoria;
+                    if (catVal) {
+                        var checkVal = catVal.toUpperCase();
+                        if (checkVal !== "MAQUINA" && checkVal !== "SIGN" && checkVal !== "BRACKET" && checkVal.indexOf("MAQUINA") === -1 && checkVal.indexOf("SIGN") === -1) {
+                            if (categoriasArray.indexOf(catVal) === -1) {
+                                categoriasArray.push(catVal);
+                            }
+                        }
+                    }
+                }
+                
+                selectCat.innerHTML = '<option value="">Seleccione una categoría...</option>';
+                for(var c=0; c<categoriasArray.length; c++){
+                    selectCat.innerHTML += '<option value="' + escapeHTML(categoriasArray[c]) + '">' + escapeHTML(categoriasArray[c]) + '</option>';
+                }
+                selectCat.disabled = false;
+                
+                resultadosBase = baseDeDatos; 
+                actualizarCarousel(baseDeDatos);
+                
+                if (window.history && window.history.replaceState) window.history.replaceState({ view: 'listado' }, "");
+                
+            } catch (e) {
+                if (loaderText) { loaderText.textContent = "Error: " + e.message; loaderText.style.color = "red"; }
+            } finally {
+                if (loader) loader.style.display = 'none';
+            }
+        }
+
+        function mostrarError(error) {
+            if (loaderText) { loaderText.textContent = "Error: " + error.message; loaderText.style.color = "red"; }
+            if (loader) { loader.style.display = 'flex'; var sp = loader.querySelector('.spinner'); if (sp) sp.style.display = 'none'; }
+        }
+
+        function generarChipsHTML(texto) {
+            if (!texto || texto === "") return "-";
+            var valores = String(texto).split(',');
+            var html = "";
+            for(var i=0; i<valores.length; i++) {
+                var val = valores[i].trim();
+                if(!val) continue;
+                
+                var txtLimpio = val.toLowerCase();
+                var claseChip = "chip-produccion"; 
+                
+                if (txtLimpio === "maquina") claseChip = "chip-blue";
+                else if (txtLimpio === "sign") claseChip = "chip-purple";
+                else if (txtLimpio === "bracket") claseChip = "chip-lightorange";
+                else if (txtLimpio === "si") claseChip = "chip-si";
+                else if (txtLimpio === "no") claseChip = "chip-no";
+                else if (txtLimpio === "tecnico") claseChip = "chip-tecnico";
+                else if (txtLimpio === "componente") claseChip = "chip-yellow"; 
+                else if (txtLimpio === "refaccion") claseChip = "chip-refaccion";
+                else if (txtLimpio === "consumible") claseChip = "chip-consumible";
+                else if (txtLimpio === "herramienta") claseChip = "chip-herramienta";
+                else if (txtLimpio === "estructura") claseChip = "chip-darkorange";
+                else if (txtLimpio === "crown" || txtLimpio === "panel led") claseChip = "chip-purple";
+                else if (txtLimpio === "double ring" || txtLimpio === "3x3 fantasy" || txtLimpio === "pantalla" || txtLimpio === "tarjeta receptora") claseChip = "chip-blue";
+                else if (txtLimpio === "blast" || txtLimpio === "fuente alimentacion" || txtLimpio === "iluminacion led") claseChip = "chip-green";
+                else if (txtLimpio === "tesla" || txtLimpio === "controlador") claseChip = "chip-yellow";
+                else if (txtLimpio === "circular tipo c" || txtLimpio === "progresivos") claseChip = "chip-lightorange";
+                else if (txtLimpio === "concept 2x2" || txtLimpio === "cableado") claseChip = "chip-red";
+                else if (txtLimpio === "concept 3x3" || txtLimpio === "kit") claseChip = "chip-gray";
+                else if (txtLimpio === "acrilico" || txtLimpio === "panoramico") claseChip = "chip-teal";
+                else if (txtLimpio.indexOf("bryke") > -1 || txtLimpio.indexOf("blackwave") > -1) claseChip = "chip-bryke";
+                else if (txtLimpio.indexOf("one") > -1 || txtLimpio.indexOf("slantop") > -1 || txtLimpio.indexOf("allure") > -1) claseChip = "chip-one";
+                else if (txtLimpio.indexOf("glare") > -1 || txtLimpio.indexOf("altius") > -1 || txtLimpio.indexOf("fusion") > -1 || txtLimpio.indexOf("illusion") > -1) claseChip = "chip-glare";
+                else if (txtLimpio.indexOf("concept") > -1 || txtLimpio.indexOf("prime") > -1 || txtLimpio.indexOf("deluxe") > -1) claseChip = "chip-concept";
+                else if (txtLimpio.indexOf("fantasy") > -1) claseChip = "chip-fantasy";
+                
+                if (txtLimpio === "si" || txtLimpio === "no") { 
+                    html += '<span class="' + claseChip + '">' + escapeHTML(val) + '</span>'; 
+                } else { 
+                    html += '<span class="chip ' + claseChip + '">' + escapeHTML(val) + '</span>'; 
+                }
+            }
+            return html;
+        }
+
+        // ====================================================================
+        // CARRUSEL SEPARADO
+        // ====================================================================
+        function actualizarCarousel(datos) {
+            var itemsMaquinas = [];
+            var itemsSigns = [];
+
+            if (carouselNivel === 'MARCA') {
+                for (var m in relacionMarcaModelo) if(itemsMaquinas.indexOf(m) === -1) itemsMaquinas.push(m);
+                itemsSigns = todosLosSignsArray;
+            } else if (carouselNivel === 'MODELO') {
+                if (tipoMenuActivo === 'MAQUINA' && relacionMarcaModelo[marcaTacticaSeleccionada]) {
+                    itemsMaquinas = relacionMarcaModelo[marcaTacticaSeleccionada].slice();
+                } else if (tipoMenuActivo === 'SIGN_DIRECTO') {
+                    itemsSigns = [modeloTactivoSeleccionado];
+                }
+            }
+
+            var catGlobal = selectCat.value;
+            var searchGlobal = document.getElementById('searchInput').value.trim();
+            var isLarge = (carouselNivel === 'MARCA' && catGlobal === "" && searchGlobal === "");
+            var sizeClass = isLarge ? "large" : "";
+
+            if (searchGlobal !== "") {
+                menuPrincipalContainer.style.display = 'none';
+                return;
+            } else {
+                menuPrincipalContainer.style.display = 'block';
+            }
+
+            // DIBUJAR MÁQUINAS
+            var htmlMaquinas = '';
+            if (carouselNivel === 'MODELO' && tipoMenuActivo === 'MAQUINA') {
+                htmlMaquinas += '<div class="carousel-card" onclick="onCarouselClick(\'\', \'MAQUINA\')">';
+                htmlMaquinas += '<div class="carousel-img-container" style="background-color: #f8f9fa;">';
+                htmlMaquinas += '<i class="fa-solid fa-layer-group" style="font-size: 50px; color: #ccc;"></i>';
+                htmlMaquinas += '</div><div class="carousel-label">TODOS LOS EQUIPOS</div></div>';
+            }
+            for(var n=0; n<itemsMaquinas.length; n++){
+                var itemName = itemsMaquinas[n];
+                var isActive = (carouselNivel === 'MARCA') ? (itemName === marcaTacticaSeleccionada) : (itemName === modeloTactivoSeleccionado);
+                var currentActClass = isActive ? 'active' : '';
+                var imgUrl = imagenesMaquinasCatalog[itemName] || ('https://placehold.co/400x500/ffffff/0f355c?text=' + encodeURIComponent(itemName)); 
+                
+                htmlMaquinas += '<div class="carousel-card ' + sizeClass + ' ' + currentActClass + '" onclick="onCarouselClick(\'' + escapeJS(itemName) + '\', \'MAQUINA\')">';
+                htmlMaquinas += '<div class="carousel-img-container"><img src="' + escapeHTML(imgUrl) + '" class="carousel-img" onerror="this.src=\'https://placehold.co/400x500/ffffff/ff0000?text=Error\'"></div>';
+                htmlMaquinas += '<div class="carousel-label">' + escapeHTML(itemName) + '</div></div>';
+            }
+
+            // DIBUJAR SIGNS
+            var htmlSigns = '';
+            if (carouselNivel === 'MODELO' && tipoMenuActivo === 'SIGN_DIRECTO') {
+                 htmlSigns += '<div class="carousel-card" onclick="onCarouselClick(\'\', \'SIGN_DIRECTO\')">';
+                 htmlSigns += '<div class="carousel-img-container" style="background-color: #f8f9fa;">';
+                 htmlSigns += '<i class="fa-solid fa-layer-group" style="font-size: 50px; color: #ccc;"></i>';
+                 htmlSigns += '</div><div class="carousel-label">TODOS LOS SIGNS</div></div>';
+            }
+            for(var n=0; n<itemsSigns.length; n++){
+                var itemName = itemsSigns[n];
+                var isActive = (itemName === modeloTactivoSeleccionado);
+                var currentActClass = isActive ? 'active' : '';
+                var imgUrl = imagenesMaquinasCatalog[itemName] || ('https://placehold.co/400x500/ffffff/0f355c?text=' + encodeURIComponent(itemName)); 
+                
+                htmlSigns += '<div class="carousel-card ' + sizeClass + ' ' + currentActClass + '" onclick="onCarouselClick(\'' + escapeJS(itemName) + '\', \'SIGN_DIRECTO\')">';
+                htmlSigns += '<div class="carousel-img-container"><img src="' + escapeHTML(imgUrl) + '" class="carousel-img" onerror="this.src=\'https://placehold.co/400x500/ffffff/ff0000?text=Error\'"></div>';
+                htmlSigns += '<div class="carousel-label">' + escapeHTML(itemName) + '</div></div>';
+            }
+
+            document.getElementById('touchMenuMarcasMaquinas').innerHTML = htmlMaquinas;
+            document.getElementById('touchMenuMarcasSigns').innerHTML = htmlSigns;
+
+            // CONTROL DE VISIBILIDAD DE CARRUSELES
+            var mContainer = document.getElementById('menuMaquinasContainer');
+            var sContainer = document.getElementById('menuSignsContainer');
+
+            if (tipoMenuActivo === 'AMBOS') {
+                mContainer.style.display = 'block';
+                sContainer.style.display = 'block';
+            } else if (tipoMenuActivo === 'MAQUINA') {
+                mContainer.style.display = 'block';
+                sContainer.style.display = 'none';
+            } else if (tipoMenuActivo === 'SIGN_DIRECTO') {
+                mContainer.style.display = 'none';
+                sContainer.style.display = 'block';
+            }
+        }
+
+        function onCarouselClick(valor, tipoClic) {
+            if(document.getElementById('filtroModelo')) document.getElementById('filtroModelo').value = "";
+            if(document.getElementById('filtroTipo')) document.getElementById('filtroTipo').value = "";
+            
+            document.getElementById('searchInput').value = ""; 
+            selectCat.value = "";
+            
+            if (valor === "") {
+                carouselNivel = 'MARCA';
+                marcaTacticaSeleccionada = "";
+                modeloTactivoSeleccionado = "";
+                tipoMenuActivo = 'AMBOS';
+                vistaListado.style.display = 'none';
+            } else {
+                if (tipoClic === 'SIGN_DIRECTO') {
+                    marcaTacticaSeleccionada = ""; 
+                    modeloTactivoSeleccionado = valor; 
+                    carouselNivel = 'MODELO'; 
+                    tipoMenuActivo = 'SIGN_DIRECTO';
+                } else if (tipoClic === 'MAQUINA') {
+                    if (carouselNivel === 'MARCA') {
+                        marcaTacticaSeleccionada = valor;
+                        carouselNivel = 'MODELO'; 
+                        modeloTactivoSeleccionado = ""; 
+                        tipoMenuActivo = 'MAQUINA';
+                    } else if (carouselNivel === 'MODELO') {
+                        modeloTactivoSeleccionado = valor; 
+                    }
+                }
+            }
+            
+            resultadosBase = baseDeDatos; 
+            actualizarCarousel(resultadosBase);
+            aplicarFiltrosCabecera();
+            
+            setTimeout(function() {
+                var activeContainer = (tipoMenuActivo === 'SIGN_DIRECTO') ? document.getElementById('menuSignsContainer') : document.getElementById('menuMaquinasContainer');
+                var activeCard = activeContainer.querySelector('.carousel-card.active');
+                if (activeCard && activeCard.scrollIntoView) {
+                    activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }, 50);
+        }
+
+        function actualizarDesplegableModelosYTipos(datosFiltrados) {
+            var selectModelo = document.getElementById('filtroModelo');
+            var modSeleccionado = selectModelo ? selectModelo.value : ""; 
+            var selectTipo = document.getElementById('filtroTipo');
+            var tipoSeleccionado = selectTipo ? selectTipo.value : "";
+            
+            var modelosArray = [];
+            var tiposArray = [];
+
+            for(var i=0; i<datosFiltrados.length; i++){
+                var realMod = datosFiltrados[i].modeloSignUnificado;
+                if(realMod) {
+                    var partsM = realMod.split(',');
+                    for(var j=0; j<partsM.length; j++){
+                        var cleanMod = partsM[j].trim();
+                        if (cleanMod !== "" && modelosArray.indexOf(cleanMod) === -1) modelosArray.push(cleanMod);
+                    }
+                }
+                
+                var realTipo = datosFiltrados[i].tipoUnificado;
+                if(realTipo) {
+                    var partsT = realTipo.split(',');
+                    for(var t=0; t<partsT.length; t++){
+                        var cleanTipo = partsT[t].trim();
+                        if (cleanTipo !== "" && tiposArray.indexOf(cleanTipo) === -1) tiposArray.push(cleanTipo);
+                    }
+                }
+            }
+            
+            modelosArray.sort();
+            tiposArray.sort();
+            
+            if (selectModelo) {
+                selectModelo.innerHTML = '<option value="">Todos los modelos</option>';
+                var modeloValido = false;
+                for(var k=0; k<modelosArray.length; k++){
+                    var modelo = modelosArray[k];
+                    selectModelo.innerHTML += '<option value="' + escapeHTML(modelo) + '">' + escapeHTML(modelo) + '</option>';
+                    if (modelo === modSeleccionado) modeloValido = true;
+                }
+                selectModelo.value = modeloValido ? modSeleccionado : "";
+            }
+
+            if (selectTipo) {
+                selectTipo.innerHTML = '<option value="">Todos los tipos</option>';
+                var tipoValido = false;
+                for(var n=0; n<tiposArray.length; n++){
+                    var tipo = tiposArray[n];
+                    selectTipo.innerHTML += '<option value="' + escapeHTML(tipo) + '">' + escapeHTML(tipo) + '</option>';
+                    if (tipo === tipoSeleccionado) tipoValido = true;
+                }
+                selectTipo.value = tipoValido ? tipoSeleccionado : "";
+            }
+        }
+
+        // ====================================================================
+        // MOTOR DE FILTRADO
+        // ====================================================================
+        function aplicarFiltrosCabecera() {
+            var filtrados = [];
+            for(var i=0; i<resultadosBase.length; i++){
+                filtrados.push(resultadosBase[i]);
+            }
+
+            // 1. FILTRO DE MARCA (MÁQUINAS)
+            if (marcaTacticaSeleccionada !== "") {
+                var temp = [];
+                var marcaLimpia = textoPlano(marcaTacticaSeleccionada);
+                var terminosValidos = [marcaLimpia];
+                
+                if (relacionMarcaModelo[marcaTacticaSeleccionada]) {
+                    var hijosMaq = relacionMarcaModelo[marcaTacticaSeleccionada];
+                    for (var hm=0; hm<hijosMaq.length; hm++) terminosValidos.push(textoPlano(hijosMaq[hm]));
+                }
+                
+                for(var j=0; j<filtrados.length; j++){
+                    var mText = textoPlano(filtrados[j].marca);
+                    var modText = textoPlano(filtrados[j].modelo);
+                    var signText = textoPlano(filtrados[j].sign);
+                    
+                    var coincidencia = false;
+                    for (var tv=0; tv<terminosValidos.length; tv++) {
+                        if (mText.indexOf(terminosValidos[tv]) > -1 || modText.indexOf(terminosValidos[tv]) > -1 || signText.indexOf(terminosValidos[tv]) > -1) {
+                            coincidencia = true;
+                            break;
+                        }
+                    }
+
+                    if (coincidencia) temp.push(filtrados[j]);
+                }
+                filtrados = temp;
+            }
+            
+            actualizarDesplegableModelosYTipos(filtrados);
+            
+            // 2. FILTRO MODELO/SIGN
+            var modeloSel = modeloTactivoSeleccionado !== "" ? modeloTactivoSeleccionado : (document.getElementById('filtroModelo') ? document.getElementById('filtroModelo').value : "");
+            if (modeloSel !== "") {
+                var temp2 = [];
+                var modSelLimpio = textoPlano(modeloSel);
+                for(var k=0; k<filtrados.length; k++){
+                    var strAComparar = textoPlano(filtrados[k].modeloSignUnificado);
+                    if (strAComparar.indexOf(modSelLimpio) > -1) { 
+                        temp2.push(filtrados[k]); 
+                    }
+                }
+                filtrados = temp2;
+            }
+
+            // 3. FILTRO TIPO UNIFICADO
+            var tipoSel = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : "";
+            if (tipoSel !== "") {
+                var temp3 = [];
+                var tipoSelLimpio = textoPlano(tipoSel);
+                for(var t=0; t<filtrados.length; t++){
+                    var stringComparar = textoPlano(filtrados[t].tipoUnificado);
+                    if (stringComparar.indexOf(tipoSelLimpio) > -1) { 
+                        temp3.push(filtrados[t]); 
+                    }
+                }
+                filtrados = temp3;
+            }
+            
+            var cat = selectCat.value;
+            var search = document.getElementById('searchInput').value.trim();
+            
+            if (cat === "" && search === "" && marcaTacticaSeleccionada === "" && modeloTactivoSeleccionado === "") {
+                vistaListado.style.display = 'none';
+            } else {
+                if(columnaOrden !== -1) { ordenarDatosInterno(filtrados); }
+                renderizarTabla(filtrados, "No se encontraron componentes para esta selección.", true);
+            }
+        }
+
+        function ordenarTabla(colIndex) {
+            if (columnaOrden === colIndex) { ordenAscendente = !ordenAscendente; } 
+            else { columnaOrden = colIndex; ordenAscendente = true; }
+
+            for(var i=0; i<=2; i++) {
+                var icono = document.getElementById('sortIcon'+i);
+                if(icono) icono.className = 'sort-icon fa-solid fa-sort';
+            }
+            var iconoActivo = document.getElementById('sortIcon'+colIndex);
+            if(iconoActivo) {
+                iconoActivo.className = ordenAscendente ? 'sort-icon active fa-solid fa-sort-up' : 'sort-icon active fa-solid fa-sort-down';
+            }
+
+            aplicarFiltrosCabecera();
+        }
+
+        function ordenarDatosInterno(arreglo) {
+            if(columnaOrden === -1) return;
+            arreglo.sort(function(a, b) {
+                var valA = ""; var valB = "";
+                if (columnaOrden === 0) {
+                    valA = a.navision.toLowerCase();
+                    valB = b.navision.toLowerCase();
+                } else if (columnaOrden === 1) {
+                    valA = a.codigoON.toLowerCase();
+                    valB = b.codigoON.toLowerCase();
+                } else {
+                    valA = a.descripcion.toLowerCase();
+                    valB = b.descripcion.toLowerCase();
+                }
+                
+                if (valA < valB) return ordenAscendente ? -1 : 1;
+                if (valA > valB) return ordenAscendente ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function mostrarListado() {
+            var cat = selectCat.value;
+            vistaDetalle.style.display = 'none';
+            document.getElementById('searchInput').value = ""; 
+            
+            if(document.getElementById('filtroModelo')) document.getElementById('filtroModelo').value = "";
+            if(document.getElementById('filtroTipo')) document.getElementById('filtroTipo').value = "";
+            
+            marcaTacticaSeleccionada = "";
+            modeloTactivoSeleccionado = "";
+            carouselNivel = 'MARCA';
+            tipoMenuActivo = 'AMBOS';
+            menuPrincipalContainer.style.display = 'block'; 
+            
+            if(cat === "") { 
+                vistaListado.style.display = 'none'; 
+                resultadosBase = baseDeDatos;
+                actualizarCarousel(baseDeDatos); 
+                return; 
+            }
+            
+            resultadosBase = [];
+            for(var i=0; i<baseDeDatos.length; i++){
+                if (textoPlano(baseDeDatos[i].categoria) === textoPlano(cat)) resultadosBase.push(baseDeDatos[i]);
+            }
+            
+            actualizarCarousel(resultadosBase); 
+            aplicarFiltrosCabecera(); 
+        }
+
+        function ejecutarBusqueda() {
+            var inputStr = document.getElementById('searchInput').value;
+            var inputLimpio = limpiarTexto(inputStr);
+            vistaDetalle.style.display = 'none';
+            
+            if (inputLimpio === "") { 
+                mostrarListado(); 
+                return; 
+            }
+            
+            selectCat.value = ""; 
+            menuPrincipalContainer.style.display = 'none'; 
+            
+            if(document.getElementById('filtroModelo')) document.getElementById('filtroModelo').value = "";
+            if(document.getElementById('filtroTipo')) document.getElementById('filtroTipo').value = "";
+            
+            var terminos = inputLimpio.split(/\s+/);
+            
+            resultadosBase = [];
+            for(var i=0; i<baseDeDatos.length; i++){
+                var item = baseDeDatos[i];
+                var valoresAplastados = Object.keys(item).map(function(k) { return item[k]; });
+                var txtCompleto = limpiarTexto(valoresAplastados.join(" "));
+                
+                var matchesAll = true;
+                for(var t=0; t<terminos.length; t++){
+                    if(txtCompleto.indexOf(terminos[t]) === -1) {
+                        matchesAll = false; break;
+                    }
+                }
+                if (matchesAll) resultadosBase.push(item);
+            }
+            
+            marcaTacticaSeleccionada = ""; 
+            modeloTactivoSeleccionado = "";
+            carouselNivel = 'MARCA';
+            tipoMenuActivo = 'AMBOS';
+            actualizarCarousel(resultadosBase);
+            aplicarFiltrosCabecera();
+        }
+
+        // ====================================================================
+        // RENDERIZADO DE TABLAS
+        // ====================================================================
+        var resultadosEnTabla = [];
+        function renderizarTabla(resultados, mensajeVacio, resetearPaginacion) {
+            if (resetearPaginacion) {
+                paginaActual = 1;
+                resultadosEnTabla = resultados;
+                tablaCuerpo.innerHTML = '';
+            }
+            
+            var inicio = (paginaActual - 1) * filasPorPagina;
+            var fin = paginaActual * filasPorPagina;
+            var lote = resultadosEnTabla.slice(inicio, fin);
+
+            if(resultadosEnTabla.length === 0) {
+                tablaCuerpo.innerHTML = '<tr><td colspan="6" style="text-align:center;">' + escapeHTML(mensajeVacio) + '</td></tr>';
+                document.getElementById('btnCargarMas').style.display = 'none';
+            } else {
+                for(var i=0; i<lote.length; i++){
+                    var item = lote[i];
+                    var tr = document.createElement('tr');
+                    tr.onclick = (function(currentItem) {
+                        return function() { mostrarDetalle(currentItem); };
+                    })(item);
+                    
+                    var html = '<td>' + escapeHTML(item.navision || '-') + '</td>';
+                    html += '<td>' + escapeHTML(item.codigoON || '-') + '</td>';
+                    html += '<td>' + escapeHTML(item.descripcion) + '</td>';
+                    html += '<td>' + generarChipsHTML(item.marca) + '</td>';
+                    html += '<td>' + generarChipsHTML(item.modeloSignUnificado) + '</td>';
+                    html += '<td>' + generarChipsHTML(item.tipoUnificado) + '</td>';
+                    
+                    tr.innerHTML = html;
+                    tablaCuerpo.appendChild(tr);
+                }
+                
+                if (fin < resultadosEnTabla.length) { document.getElementById('btnCargarMas').style.display = 'block'; } 
+                else { document.getElementById('btnCargarMas').style.display = 'none'; }
+            }
+            vistaListado.style.display = 'block';
+        }
+
+        function cargarMasPagina() {
+            paginaActual++;
+            renderizarTabla(resultadosEnTabla, "", false);
+        }
+
+        // ====================================================================
+        // LLENADO DE VISTA DETALLE
+        // ====================================================================
+        function mostrarDetalle(itemData) {
+            if (window.history && window.history.pushState) {
+                if (vistaListado.style.display === 'block') {
+                    var estadoLista = { 
+                        cat: selectCat.value, 
+                        busq: document.getElementById('searchInput').value, 
+                        marcaTactil: marcaTacticaSeleccionada, 
+                        modelo: document.getElementById('filtroModelo') ? document.getElementById('filtroModelo').value : "",
+                        tipo: document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : ""
+                    };
+                    window.history.pushState({ view: 'detalle', state: estadoLista }, "");
+                }
+            }
+
+            vistaListado.style.display = 'none';
+            menuPrincipalContainer.style.display = 'none';
+            
+            document.getElementById('detDescripcion').textContent = itemData.descripcion || "-";
+            document.getElementById('detCodigoNav').textContent = itemData.navision || "-";
+            document.getElementById('detCodigoON').textContent = itemData.codigoON || "-";
+            
+            document.getElementById('detEquipo').innerHTML = generarChipsHTML(itemData.equipo);
+            document.getElementById('detCat').textContent = itemData.categoria || "-";
+            document.getElementById('detSubcat').textContent = itemData.subCategoria || "-";
+
+            document.getElementById('detMarca').innerHTML = generarChipsHTML(itemData.marca);
+            document.getElementById('detModeloSign').innerHTML = generarChipsHTML(itemData.modeloSignUnificado);
+            document.getElementById('detTipo').innerHTML = generarChipsHTML(itemData.tipoUnificado);
+
+            document.getElementById('detReparable').innerHTML = generarChipsHTML(itemData.reparable);
+            document.getElementById('detSolicitante').innerHTML = generarChipsHTML(itemData.solicitante);
+
+            var linkRefacciones = document.getElementById('linkRefacciones');
+            var refDe = itemData.refaccion;
+            
+            if (refDe.trim() !== "") {
+                linkRefacciones.innerHTML = 'Pertenece a: ' + escapeHTML(refDe) + ' <i class="fa-solid fa-link"></i>';
+                linkRefacciones.style.display = 'flex'; 
+                linkRefacciones.onclick = function() { abrirModalPadres(itemData); };
+            } else { 
+                linkRefacciones.innerHTML = 'Ver refacciones asociadas <i class="fa-solid fa-magnifying-glass-plus"></i>';
+                linkRefacciones.style.display = 'flex'; 
+                linkRefacciones.onclick = function() { abrirModalRefacciones(itemData); };
+            }
+
+            var imgElement = document.getElementById('detImagen');
+            var visor3D = document.getElementById('detModelo3D');
+            var btnInfo = document.getElementById('btnInfoOculto');
+            
+            urlInfoActual = itemData.plano;
+
+            if (itemData.modelo3D.trim() !== "") {
+                imgElement.style.display = 'none'; 
+                visor3D.src = itemData.modelo3D; 
+                visor3D.style.display = 'block';
+            } else {
+                visor3D.style.display = 'none'; 
+                visor3D.src = ""; 
+                imgElement.src = itemData.foto; 
+                imgElement.style.display = 'block';
+            }
+            
+            if (urlInfoActual.trim() !== "") {
+                btnInfo.style.display = 'flex'; 
+            } else { 
+                btnInfo.style.display = 'none'; 
+            }
+            
+            vistaDetalle.style.display = 'block';
+        }
+        
+        function abrirDocumentoInfo() {
+            if (urlInfoActual !== "") {
+                var link = document.getElementById('linkDocOculto');
+                link.href = urlInfoActual; link.click(); 
+            }
+        }
+
+        // ====================================================================
+        // MODALES
+        // ====================================================================
+        function abrirModalRefacciones(componentePadre) {
+            var refacciones = [];
+            var navPadre = limpiarTexto(componentePadre.navision);
+            var onPadre = limpiarTexto(componentePadre.codigoON);
+            
+            for(var i=0; i<baseDeDatos.length; i++){
+                var item = baseDeDatos[i];
+                var refStr = item.refaccion;
+                if (refStr !== "") {
+                    var refArray = refStr.split(',');
+                    var hayCoincidencia = false;
+                    for (var r=0; r<refArray.length; r++) {
+                        var refLimpia = limpiarTexto(refArray[r]);
+                        if ((navPadre !== "" && refLimpia.indexOf(navPadre) > -1) || (onPadre !== "" && refLimpia.indexOf(onPadre) > -1)) {
+                            hayCoincidencia = true;
+                            break;
+                        }
+                    }
+                    if (hayCoincidencia) refacciones.push(item);
+                }
+            }
+            if(refacciones.length > 0) renderizarModalLista(refacciones, "Listado de refacciones");
+            else alert("No se encontraron refacciones asociadas para este componente.");
+        }
+
+        function abrirModalPadres(componenteHijo) {
+            var refStrHijo = componenteHijo.refaccion;
+            if (refStrHijo === "") return;
+            
+            var padres = [];
+            var refArrayHijo = refStrHijo.split(',');
+
+            for(var i=0; i<baseDeDatos.length; i++){
+                var item = baseDeDatos[i];
+                var nav = limpiarTexto(item.navision);
+                var on = limpiarTexto(item.codigoON);
+                
+                var esPadre = false;
+                for (var r=0; r<refArrayHijo.length; r++) {
+                    var refLimpia = limpiarTexto(refArrayHijo[r]);
+                    if ((nav !== "" && refLimpia.indexOf(nav) > -1) || (on !== "" && refLimpia.indexOf(on) > -1)) {
+                        esPadre = true;
+                        break;
+                    }
+                }
+                if (esPadre) padres.push(item);
+            }
+            
+            if (padres.length > 0) renderizarModalLista(padres, "Pertenece a");
+            else alert("No se encontró la ficha principal en la base de datos.");
+        }
+
+        function renderizarModalLista(lista, titulo) {
+            var modal = document.getElementById('modalGenerico');
+            var tbody = document.getElementById('modalTablaCuerpo');
+            document.getElementById('modalTitulo').textContent = titulo;
+            tbody.innerHTML = ''; 
+
+            if (lista.length > 0) {
+                for(var i=0; i<lista.length; i++){
+                    var item = lista[i];
+                    var tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer'; 
+                    tr.onclick = (function(currentItem) {
+                        return function() { cerrarModal(); mostrarDetalle(currentItem); };
+                    })(item);
+                    
+                    var html = '<td style="text-align: center;"><img src="' + escapeHTML(item.foto) + '" alt="Miniatura" class="modal-img" onerror="this.onerror=null; this.src=\'https://placehold.co/600x400/eeeeee/333333?text=Sin+Imagen\';"></td>';
+                    html += '<td>' + escapeHTML(item.navision || '-') + '</td>';
+                    html += '<td>' + escapeHTML(item.codigoON || '-') + '</td>';
+                    html += '<td style="border-right: none;">' + escapeHTML(item.descripcion) + '</td>';
+                    
+                    tr.innerHTML = html;
+                    tbody.appendChild(tr);
+                }
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 30px;">No se encontraron resultados.</td></tr>';
+            }
+            modal.style.display = 'flex';
+        }
+
+        function cerrarModal() { document.getElementById('modalGenerico').style.display = 'none'; }
+        function cerrarModalFuera(e) { if (e.target && e.target.className && e.target.className.indexOf('modal-overlay') > -1) cerrarModal(); }
+
+        window.addEventListener('popstate', function(e) {
+            cerrarModal(); 
+            
+            if (!e.state || e.state.view === 'listado') {
+                vistaDetalle.style.display = 'none';
+                
+                if (e.state && e.state.state) {
+                    if(e.state.state.cat !== undefined && document.getElementById('categoriaSelect')) document.getElementById('categoriaSelect').value = e.state.state.cat;
+                    if(e.state.state.tipo !== undefined && document.getElementById('filtroTipo')) document.getElementById('filtroTipo').value = e.state.state.tipo;
+                }
+
+                var search = document.getElementById('searchInput').value.trim();
+                
+                if (search === "") {
+                    vistaListado.style.display = (selectCat.value === "" && marcaTacticaSeleccionada === "" && modeloTactivoSeleccionado === "") ? 'none' : 'block';
+                    menuPrincipalContainer.style.display = 'block';
+                } else {
+                    vistaListado.style.display = 'block';
+                    menuPrincipalContainer.style.display = 'none'; 
+                }
+            } 
+            else if (e.state && e.state.view === 'detalle') {
+                vistaDetalle.style.display = 'block';
+                vistaListado.style.display = 'none';
+                menuPrincipalContainer.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
